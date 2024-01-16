@@ -49,11 +49,11 @@ DATA <- read_csv("Compiled Project Spreadsheet.csv")
 DATA <- DATA |>
     mutate(DateTime = paste(Date, Time))
   
-DATA$DateTime <- anytime(DATA$DateTime)
+DATA$DateTime <- anytime::anytime(DATA$DateTime)
   
   #Select parameters of use
   DATA <- DATA %>% 
-    select("DateTime", "Temp C", "Specific Cond µS/cm", "DO mg/L", "pH", "Turbidity FNU", "Depth m")
+    tidyr::select("DateTime", "Temp C", "Specific Cond µS/cm", "DO mg/L", "pH", "Turbidity FNU", "Depth m")
   
   #Pivot data table
   DATA <- DATA %>% 
