@@ -1,0 +1,146 @@
+---
+title: "Quincy Bay HREP Water Quality Monitoring Data"
+output: 
+  flexdashboard::flex_dashboard:
+    theme:
+      primary: "#9FBCC8"
+      base_font:
+        google: Prompt
+      code_font:
+        google: JetBrains Mono
+    orientation: columns
+    vertical_layout: fill
+    logo: "Picture1.png"
+runtime: shiny
+---
+Sidebar {.sidebar}
+=====================================F[P-0VC ;.\7/G==
+
+Column {data-width=600}
+-----------------------------------------------------------------------
+
+```{r setup, include=FALSE}
+  library(flexdashboard)
+  # Install thematic and un-comment for themed static plots (i.e., ggplot2)
+  # thematic::thematic_rmd()
+```
+
+Column {data-width=650}
+-----------------------------------------------------------------------
+
+### Continuous Monitoring Data
+
+```{r}
+
+  library(anytime)
+  library(ggplot.multistats)
+  library(ggplot2)
+  library(gridExtra)
+  library(scales)
+  library(plotly)
+  library(readr)
+  library(tidyr)
+
+#Read File
+DATA <- read_csv("Compiled Project Spreadsheet.csv")
+
+#Change Date/Time Format
+
+DATA <- DATA |>
+    mutate(DateTime = paste(Date, Time))
+  
+DATA$DateTime <- anytime(DATA$DateTime)
+  
+  #Select parameters of use
+  DATA <- DATA %>% 
+    select("DateTime", "Temp C", "Specific Cond µS/cm", "DO mg/L", "pH", "Turbidity FNU", "Depth m")
+  
+  #Pivot data table
+  DATA <- DATA %>% 
+    pivot_longer(cols = -DateTime, names_to = 'Parameter', values_to = 'Value' )
+  
+  #Plot Data
+  Graphs <- ggplot(DATA,aes(x=DateTime,y=Value))+
+    geom_line()+
+    facet_wrap(vars(Parameter), nrow = 6, scales = "free_y", labeller = labeller(Parameter = 
+                                                                                   c("DO mg/L" = "Dissolved Oxygen (mg/L)",
+                                                                                     "pH" = "pH (none)",
+                                                                                     "Specific Cond µS/cm" = "Specific Conductance (µs/cm)",
+                                                                                     "Temp C" = "Temperature (C)",
+                                                                                     "Turbidity FNU" = "Turbidity (FNU)",
+                                                                                     "Depth m" = "Depth (m)")))+
+    theme_light()+
+    labs(y= "", x="")
+  
+  #Interactive Graph
+  ggplotly(Graphs)
+
+```
+
+Column {data-width=400}
+-----------------------------------------------------------------------
+    
+### Site Locations
+
+```{r}
+
+ library(leaflet)
+  library(sp)
+  
+  data <- read.csv("QuincyBay_Locations.csv")
+  
+  data$Long <- as.numeric(data$Long)
+  data$Lat <- as.numeric(data$Lat)
+  
+  
+  m <- leaflet() %>% 
+    addTiles() %>% 
+    addCircleMarkers(lng = -91.41439, lat = 39.97359, label = "W-M329.5Y") %>%
+    addCircleMarkers(lng = -91.434937, lat = 39.953843, label = "W-M328.8K") %>% 
+    addCircleMarkers(lng = -91.433622, lat = 39.969817, label = "W-M329.8P")
+  
+  m
+
+```
+
+### Boxplot Statistics
+
+```{r}
+  #Read File
+
+  Boxplot <- read_csv("Compiled Project Spreadsheet.csv")
+
+  #Change Date/Time Format
+  
+  Boxplot <- Boxplot |>
+    mutate(DateTime = paste(Date, Time))
+
+  
+  Boxplot$DateTime <- anytime(Boxplot$DateTime)
+
+  #Select parameters of use
+  Boxplot <- Boxplot %>% 
+    select(DateTime, "Temp C", "DO mg/L", "pH", "Turbidity FNU")
+  
+  #Pivot data table
+  Boxplot <- Boxplot %>% 
+    pivot_longer(cols = -DateTime, names_to = 'Parameter', values_to = 'Value' )
+  
+  #Plot Data
+  Graph_box <- ggplot(Boxplot,aes(y=Value, x=factor(0)))+
+    geom_boxplot()+
+    facet_wrap(vars(Parameter), ncol = 4, scales = "free_y", labeller = labeller(Parameter = 
+                                                                                   c("DO mg/L" = "DO (mg/L)",
+                                                                                     "pH" = "pH (none)",
+                                                                                     "Temp C" = "Temp (C)",
+                                                                                     "Turbidity FNU" = "Turbidity (FNU)")))+
+    theme_light()+
+    theme(axis.text.x=element_blank())+
+    labs(y= "", x= "")
+  
+  #Interactive Graph
+  ggplotly(Graph_box)
+
+```
+
+
