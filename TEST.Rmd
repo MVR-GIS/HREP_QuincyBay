@@ -11,21 +11,34 @@ output:
     orientation: columns
     vertical_layout: fill
     logo: "Picture1.png"
-runtime: shiny
+
 ---
-Sidebar {.sidebar}
-=====================================F[P-0VC ;.\7/G==
+Inputs {.sidebar}
+-----------------------------------
 
-Column {data-width=600}
------------------------------------------------------------------------
+```{r}
 
-```{r setup, include=FALSE}
-  library(flexdashboard)
-  # Install thematic and un-comment for themed static plots (i.e., ggplot2)
-  # thematic::thematic_rmd()
+library(flexdashboard)
+library(tidyverse)
+library(shiny)
+   
+   selectInput("Project", 
+            label = "Project", 
+            choices = c("Quincy Bay")) 
+    
+    selectInput("Site", 
+            label = "Monitoring Site", 
+            choices = c("W-M329.5Y", "W-M329.8P"))
+    
+     selectInput("Monitoring Season", 
+            label = "Monitoring Season", 
+            choices = c("Winter 2020-2021", "Summer 2021", "Winter 2021-2022", "Summer 2022", "Winter 2022-2023", "Summer 2023"))
+
 ```
 
-Column {data-width=650}
+
+
+Column {data-width=550}
 -----------------------------------------------------------------------
 
 ### Continuous Monitoring Data
@@ -49,11 +62,11 @@ DATA <- read_csv("Compiled Project Spreadsheet.csv")
 DATA <- DATA |>
     mutate(DateTime = paste(Date, Time))
   
-DATA$DateTime <- anytime::anytime(DATA$DateTime)
+DATA$DateTime <- anytime(DATA$DateTime)
   
   #Select parameters of use
   DATA <- DATA %>% 
-    tidyr::select("DateTime", "Temp C", "Specific Cond µS/cm", "DO mg/L", "pH", "Turbidity FNU", "Depth m")
+    select("DateTime", "Temp C", "Specific Cond µS/cm", "DO mg/L", "pH", "Turbidity FNU", "Depth m")
   
   #Pivot data table
   DATA <- DATA %>% 
@@ -77,7 +90,7 @@ DATA$DateTime <- anytime::anytime(DATA$DateTime)
 
 ```
 
-Column {data-width=400}
+Column {data-width=450}
 -----------------------------------------------------------------------
     
 ### Site Locations
