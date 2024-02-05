@@ -1,5 +1,5 @@
 ---
-title: "Quincy Bay HREP Water Quality Monitoring Data"
+title: "Rock Island District HREP Water Quality Monitoring sd"
 output: 
   flexdashboard::flex_dashboard:
     theme:
@@ -13,35 +13,23 @@ output:
     logo: "Picture1.png"
 
 ---
-Inputs {.sidebar}
------------------------------------
 
 ```{r}
-
 library(flexdashboard)
 library(tidyverse)
 library(shiny)
-   
-   selectInput("Project", 
-            label = "Project", 
-            choices = c("Quincy Bay")) 
-    
-    selectInput("Site", 
-            label = "Monitoring Site", 
-            choices = c("W-M329.5Y", "W-M329.8P"))
-    
-     selectInput("Monitoring Season", 
-            label = "Monitoring Season", 
-            choices = c("Winter 2020-2021", "Summer 2021", "Winter 2021-2022", "Summer 2022", "Winter 2022-2023", "Summer 2023"))
+library(crosstalk)
+
 
 ```
 
 
 
-Column {data-width=550}
+
+Column {sd-width=550}
 -----------------------------------------------------------------------
 
-### Continuous Monitoring Data
+### Continuous Monitoring sd
 
 ```{r}
 
@@ -54,43 +42,65 @@ Column {data-width=550}
   library(readr)
   library(tidyr)
 
-#Read File
-DATA <- read_csv("Compiled Project Spreadsheet.csv")
+#Import and rename continuous sd frame
+sd <- read.csv("Compiled Project Spreadsheet.csv", check.names=FALSE)
 
 #Change Date/Time Format
 
-DATA <- DATA |>
+sd <- sd |>
     mutate(DateTime = paste(Date, Time))
   
-DATA$DateTime <- anytime(DATA$DateTime)
+sd$DateTime <- anytime(sd$DateTime)
   
-  #Select parameters of use
-  DATA <- DATA %>% 
-    select("DateTime", "Temp C", "Specific Cond µS/cm", "DO mg/L", "pH", "Turbidity FNU", "Depth m")
+#Select parameters of use
+sd <- sd %>% 
+    select("Project", "Site", "Season", "DateTime", "Temp", "SpCon", "DO", "pH", "Turbidity", "Depth")
   
-  #Pivot data table
-  DATA <- DATA %>% 
-    pivot_longer(cols = -DateTime, names_to = 'Parameter', values_to = 'Value' )
-  
-  #Plot Data
-  Graphs <- ggplot(DATA,aes(x=DateTime,y=Value))+
-    geom_line()+
-    facet_wrap(vars(Parameter), nrow = 6, scales = "free_y", labeller = labeller(Parameter = 
-                                                                                   c("DO mg/L" = "Dissolved Oxygen (mg/L)",
-                                                                                     "pH" = "pH (none)",
-                                                                                     "Specific Cond µS/cm" = "Specific Conductance (µs/cm)",
-                                                                                     "Temp C" = "Temperature (C)",
-                                                                                     "Turbidity FNU" = "Turbidity (FNU)",
-                                                                                     "Depth m" = "Depth (m)")))+
-    theme_light()+
-    labs(y= "", x="")
-  
+#Pivot sd table
+# sd <- sd %>% 
+#     pivot_longer(cols = -DateTime, names_to = 'Parameter', values_to = 'Value' )
+
+# Wrap sd in Sharedsd to use with crosstalk
+sd <- SharedData$new(sd)  
+    
+#Plot sd
+Temp <- sd |> 
+  plot_ly(x=~DateTime, y=~Temp)|> 
+  add_lines()
+
+SpCon <- sd |> 
+  plot_ly(x=~DateTime, y=~SpCon)|> 
+  add_lines()
+
+DO <- sd |> 
+  plot_ly(x=~DateTime, y=~DO)|> 
+  add_lines()
+
+
+pH <- sd |> 
+  plot_ly(x=~DateTime, y=~pH) |> 
+  add_lines()
+
+
+#Stack plots
+crosstalk::bscols(
+     list(
+       DO,
+      Temp,
+      pH,
+      SpCon
+      )
+)
+
+
+
+
   #Interactive Graph
-  ggplotly(Graphs)
+#  ggplotly(Graphs)
 
 ```
 
-Column {data-width=450}
+Column {sd-width=450}
 -----------------------------------------------------------------------
     
 ### Site Locations
@@ -100,10 +110,10 @@ Column {data-width=450}
  library(leaflet)
   library(sp)
   
-  data <- read.csv("QuincyBay_Locations.csv")
+  #Loc <- read.csv("QuincyBay_Locations.csv")
   
-  data$Long <- as.numeric(data$Long)
-  data$Lat <- as.numeric(data$Lat)
+  #Loc$Long <- as.numeric(Loc$Long)
+  #Loc$Lat <- as.numeric(Loc$Lat)
   
   
   m <- leaflet() %>% 
@@ -119,41 +129,82 @@ Column {data-width=450}
 ### Boxplot Statistics
 
 ```{r}
-  #Read File
 
-  Boxplot <- read_csv("Compiled Project Spreadsheet.csv")
-
-  #Change Date/Time Format
-  
-  Boxplot <- Boxplot |>
-    mutate(DateTime = paste(Date, Time))
-
-  
-  Boxplot$DateTime <- anytime(Boxplot$DateTime)
-
-  #Select parameters of use
-  Boxplot <- Boxplot %>% 
-    select(DateTime, "Temp C", "DO mg/L", "pH", "Turbidity FNU")
-  
-  #Pivot data table
-  Boxplot <- Boxplot %>% 
-    pivot_longer(cols = -DateTime, names_to = 'Parameter', values_to = 'Value' )
-  
-  #Plot Data
-  Graph_box <- ggplot(Boxplot,aes(y=Value, x=factor(0)))+
-    geom_boxplot()+
-    facet_wrap(vars(Parameter), ncol = 4, scales = "free_y", labeller = labeller(Parameter = 
-                                                                                   c("DO mg/L" = "DO (mg/L)",
-                                                                                     "pH" = "pH (none)",
-                                                                                     "Temp C" = "Temp (C)",
-                                                                                     "Turbidity FNU" = "Turbidity (FNU)")))+
-    theme_light()+
-    theme(axis.text.x=element_blank())+
-    labs(y= "", x= "")
-  
-  #Interactive Graph
-  ggplotly(Graph_box)
+# #Import and rename continuous sd frame
+# sd <- read.csv("Compiled Project Spreadsheet.csv", check.names=FALSE)
+# 
+#   
+# #Change Date/Time Format
+# sd <- sd |>
+#   mutate(DateTime = paste(Date, Time))
+# 
+# sd$DateTime <- anytime(sd$DateTime)
+# 
+# 
+# # Wrap sd in Sharedsd to use with crosstalk
+# sd <- SharedData$new(sd)
+#   
+# #Select parameters of use
+# sd <- sd %>% 
+#     select(DateTime, "Temp", "DO", "pH", "Turbidity")
+#   
+# #Pivot sd table
+# sd <- sd %>% 
+#   pivot_longer(cols = -DateTime, names_to = 'Parameter', values_to = 'Value' )
+#   
+# #Plot sd
+# Graph_box <- ggplot(sd,aes(y=Value, x=factor(0)))+
+#   geom_sd()+
+#   facet_wrap(vars(Parameter), ncol = 4, scales = "free_y", labeller = labeller(Parameter = 
+#                                                                                    c("DO" = "DO (mg/L)",
+#                                                                                      "pH" = "pH (none)",
+#                                                                                      "Temp" = "Temp (C)",
+#                                                                                      "Turbidity" = "Turbidity (FNU)")))+
+#     theme_light()+
+#     theme(axis.text.x=element_blank())+
+#     labs(y= "", x= "")
+#   
+#   #Interactive Graph
+#   ggplotly(Graph_box)
 
 ```
 
 
+Inputs {.sidebar}
+-----------------------------------
+
+```{r}
+
+
+project_filter <- filter_select(
+  id = "Prj",
+  label = "Project:",
+  sharedData = sd,
+  group = ~Project
+)
+
+site_filter <- filter_select(
+  id = "Site",
+  label = "Site:",
+  sharedData = sd,
+  group = ~Site
+)
+
+season_filter <- filter_select(
+  id = "Season",
+  label = "Season:",
+  sharedData = sd,
+  group = ~Season
+)
+
+
+crosstalk::bscols(
+     list(
+      project_filter,
+      site_filter,
+      season_filter)
+)
+
+
+
+```
