@@ -1,5 +1,5 @@
 ---
-title: "Rock Island District HREP Water Quality Monitoring sd"
+title: "Rock Island District HREP Water Quality Monitoring Data"
 output: 
   flexdashboard::flex_dashboard:
     theme:
@@ -14,33 +14,21 @@ output:
 
 ---
 
+
 ```{r}
 library(flexdashboard)
 library(tidyverse)
 library(shiny)
 library(crosstalk)
-
-
-```
-
-
-
-
-Column {sd-width=550}
------------------------------------------------------------------------
-
-### Continuous Monitoring sd
-
-```{r}
-
-  library(anytime)
-  library(ggplot.multistats)
-  library(ggplot2)
-  library(gridExtra)
-  library(scales)
-  library(plotly)
-  library(readr)
-  library(tidyr)
+library(anytime)
+library(ggplot.multistats)
+library(ggplot2)
+library(gridExtra)
+library(scales)
+library(plotly)
+library(readr)
+library(tidyr)
+library(crosstalk)
 
 #Import and rename continuous sd frame
 sd <- read.csv("Compiled Project Spreadsheet.csv", check.names=FALSE)
@@ -61,44 +49,68 @@ sd <- sd %>%
 #     pivot_longer(cols = -DateTime, names_to = 'Parameter', values_to = 'Value' )
 
 # Wrap sd in Sharedsd to use with crosstalk
-sd <- SharedData$new(sd)  
-    
+sd <- SharedData$new(sd, group = "Site")  
+
+```
+
+
+Column {sd-width=550}
+-----------------------------------------------------------------------
+
+### Continuous Monitoring Data
+
+```{r}
 #Plot sd
-Temp <- sd |> 
-  plot_ly(x=~DateTime, y=~Temp)|> 
-  add_lines()
 
-SpCon <- sd |> 
-  plot_ly(x=~DateTime, y=~SpCon)|> 
-  add_lines()
-
-DO <- sd |> 
-  plot_ly(x=~DateTime, y=~DO)|> 
-  add_lines()
+bscols(list(plot_ly(data=sd, x=~DateTime, y=~Temp) |> add_lines(), 
+       plot_ly(data=sd, x=~DateTime, y=~DO) |>  add_lines(),
+       plot_ly(data=sd, x=~DateTime, y=~pH) |>  add_lines(),
+       plot_ly(data=sd, x=~DateTime, y=~SpCon) |>  add_lines()))
 
 
-pH <- sd |> 
-  plot_ly(x=~DateTime, y=~pH) |> 
-  add_lines()
+
+```
 
 
-#Stack plots
+Inputs {.sidebar}
+-----------------------------------
+
+```{r}
+
+
+project_filter <- filter_select(
+  id = "Prj",
+  label = "Project:",
+  sharedData = sd,
+  group = ~Project
+)
+
+site_filter <- filter_select(
+  id = "Site",
+  label = "Site:",
+  sharedData = sd,
+  group = ~Site
+)
+
+season_filter <- filter_select(
+  id = "Season",
+  label = "Season:",
+  sharedData = sd,
+  group = ~Season
+)
+
+
 crosstalk::bscols(
      list(
-       DO,
-      Temp,
-      pH,
-      SpCon
-      )
+      project_filter,
+      site_filter,
+      season_filter)
 )
 
 
 
-
-  #Interactive Graph
-#  ggplotly(Graphs)
-
 ```
+
 
 Column {sd-width=450}
 -----------------------------------------------------------------------
@@ -169,42 +181,3 @@ Column {sd-width=450}
 
 ```
 
-
-Inputs {.sidebar}
------------------------------------
-
-```{r}
-
-
-project_filter <- filter_select(
-  id = "Prj",
-  label = "Project:",
-  sharedData = sd,
-  group = ~Project
-)
-
-site_filter <- filter_select(
-  id = "Site",
-  label = "Site:",
-  sharedData = sd,
-  group = ~Site
-)
-
-season_filter <- filter_select(
-  id = "Season",
-  label = "Season:",
-  sharedData = sd,
-  group = ~Season
-)
-
-
-crosstalk::bscols(
-     list(
-      project_filter,
-      site_filter,
-      season_filter)
-)
-
-
-
-```
