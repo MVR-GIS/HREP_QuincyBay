@@ -62,13 +62,16 @@ Column {sd-width=550}
 ```{r}
 #Plot sd
 
-bscols(list(plot_ly(data=sd, x=~DateTime, y=~Temp) |> add_lines(), 
-       plot_ly(data=sd, x=~DateTime, y=~DO) |>  add_lines(),
-       plot_ly(data=sd, x=~DateTime, y=~pH) |>  add_lines(),
-       plot_ly(data=sd, x=~DateTime, y=~SpCon) |>  add_lines()))
 
+  Temp <-plot_ly(data=sd, x=~DateTime, y=~Temp) |> add_lines() 
+  DO <- plot_ly(data=sd, x=~DateTime, y=~DO) |>  add_lines()
+  pH <- plot_ly(data=sd, x=~DateTime, y=~pH) |>  add_lines()
+  SpCon <- plot_ly(data=sd, x=~DateTime, y=~SpCon) |>  add_lines()
+  
+  fig <- subplot(DO, Temp, pH, SpCon, nrows = 4) 
 
-
+  fig
+ 
 ```
 
 
@@ -142,42 +145,31 @@ Column {sd-width=450}
 
 ```{r}
 
-# #Import and rename continuous sd frame
-# sd <- read.csv("Compiled Project Spreadsheet.csv", check.names=FALSE)
-# 
-#   
-# #Change Date/Time Format
-# sd <- sd |>
-#   mutate(DateTime = paste(Date, Time))
-# 
-# sd$DateTime <- anytime(sd$DateTime)
-# 
-# 
-# # Wrap sd in Sharedsd to use with crosstalk
-# sd <- SharedData$new(sd)
-#   
-# #Select parameters of use
-# sd <- sd %>% 
-#     select(DateTime, "Temp", "DO", "pH", "Turbidity")
-#   
-# #Pivot sd table
-# sd <- sd %>% 
-#   pivot_longer(cols = -DateTime, names_to = 'Parameter', values_to = 'Value' )
-#   
-# #Plot sd
-# Graph_box <- ggplot(sd,aes(y=Value, x=factor(0)))+
-#   geom_sd()+
-#   facet_wrap(vars(Parameter), ncol = 4, scales = "free_y", labeller = labeller(Parameter = 
-#                                                                                    c("DO" = "DO (mg/L)",
-#                                                                                      "pH" = "pH (none)",
-#                                                                                      "Temp" = "Temp (C)",
-#                                                                                      "Turbidity" = "Turbidity (FNU)")))+
-#     theme_light()+
-#     theme(axis.text.x=element_blank())+
-#     labs(y= "", x= "")
-#   
-#   #Interactive Graph
-#   ggplotly(Graph_box)
+#Import and rename continuous sd frame
+sd
+
+#Select parameters of use
+sd <- sd %>%
+    select(DateTime, "Temp", "DO", "pH", "Turbidity", "Season", "Site","Project")
+
+#Pivot sd table
+sd <- sd %>%
+  pivot_longer(cols = -DateTime, names_to = 'Parameter', values_to = 'Value' )
+
+#Plot sd
+Graph_box <- ggplot(sd,aes(y=Value, x=factor(0)))+
+  geom_sd()+
+  facet_wrap(vars(Parameter), ncol = 4, scales = "free_y", labeller = labeller(Parameter =
+                                                                                   c("DO" = "DO (mg/L)",
+                                                                                     "pH" = "pH (none)",
+                                                                                     "Temp" = "Temp (C)",
+                                                                                     "Turbidity" = "Turbidity (FNU)")))+
+    theme_light()+
+    theme(axis.text.x=element_blank())+
+    labs(y= "", x= "")
+
+  #Interactive Graph
+  ggplotly(Graph_box)
 
 ```
 
