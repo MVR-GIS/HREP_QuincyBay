@@ -33,10 +33,14 @@ library(crosstalk)
 #Import and rename continuous sd frame
 sd <- read.csv("Compiled Project Spreadsheet.csv", check.names=FALSE)
 
-#Change Date/Time Format
-sd <- sd |>
-    mutate(DateTime = paste(Date, Time))
-  
+
+#Format Date and Time
+sd$Date <- mdy(sd$Date)
+
+sd <- sd %>% 
+  mutate(DateTime= as.POSIXct(paste(Date, Time), format= "%Y-%m-%d %H:%M:%S"))
+
+
 sd$DateTime <- anytime(sd$DateTime)
   
 #Select parameters of use
