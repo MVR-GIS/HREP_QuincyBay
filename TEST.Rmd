@@ -34,7 +34,6 @@ library(crosstalk)
 sd <- read.csv("Compiled Project Spreadsheet.csv", check.names=FALSE)
 
 #Change Date/Time Format
-
 sd <- sd |>
     mutate(DateTime = paste(Date, Time))
   
@@ -44,10 +43,6 @@ sd$DateTime <- anytime(sd$DateTime)
 sd <- sd %>% 
     select("Project", "Site", "Season", "DateTime", "Temp", "SpCon", "DO", "pH", "Turbidity", "Depth")
   
-#Pivot sd table
-# sd <- sd %>% 
-#     pivot_longer(cols = -DateTime, names_to = 'Parameter', values_to = 'Value' )
-
 # Wrap sd in Sharedsd to use with crosstalk
 sd <- SharedData$new(sd, group = "Site")  
 
@@ -62,14 +57,46 @@ Column {sd-width=550}
 ```{r}
 #Plot sd
 
+  DO <- plot_ly(data=sd, 
+                x=~DateTime, 
+                y=~DO)|> 
+        layout(yaxis = list(title = "Dissolved Oxygen (mg/L)")) |> 
+        add_lines()
 
-  Temp <-plot_ly(data=sd, x=~DateTime, y=~Temp) |> add_lines() 
-  DO <- plot_ly(data=sd, x=~DateTime, y=~DO) |>  add_lines()
-  pH <- plot_ly(data=sd, x=~DateTime, y=~pH) |>  add_lines()
-  SpCon <- plot_ly(data=sd, x=~DateTime, y=~SpCon) |>  add_lines()
+  Temp <-plot_ly(data=sd, 
+                 x=~DateTime, 
+                 y=~Temp) |> 
+         layout(yaxis = list(title = "Temperature (C)")) |> 
+         add_lines()
   
-  fig <- subplot(DO, Temp, pH, SpCon, nrows = 4) 
-
+  pH <- plot_ly(data=sd, 
+                x=~DateTime, 
+                y=~pH)|> 
+        layout(yaxis = list(title = "pH (none)")) |> 
+        add_lines() 
+  
+  SpCon <- plot_ly(data=sd, 
+                   x=~DateTime, 
+                   y=~SpCon)|> 
+          layout(yaxis = list(title = "Specific Conductance (ug/L)")) |> 
+          add_lines()
+  
+  # Turb <- plot_ly(data=sd, 
+  #                  x=~DateTime, 
+  #                  y=~Turbidity)|> 
+  #         layout(yaxis = list(title = "Turbidity (FNU)")) |> 
+  #         add_lines()
+  
+  # Depth <- plot_ly(data=sd, 
+  #                  x=~DateTime, 
+  #                  y=~Depth)|> 
+  #         layout(yaxis = list(title = "Depth (m)")) |> 
+  #         add_lines()
+  
+  
+  fig <- subplot(DO, Temp, pH, SpCon, nrows = 4, titleY = TRUE) |>
+         hide_legend() 
+  
   fig
  
 ```
@@ -145,31 +172,26 @@ Column {sd-width=450}
 
 ```{r}
 
-#Import and rename continuous sd frame
-sd
+DO_box <- sd |> plot_ly(y = ~DO, type = "box", name = "Dissolved Oxygen (mg/L)")
 
-#Select parameters of use
-sd <- sd %>%
-    select(DateTime, "Temp", "DO", "pH", "Turbidity", "Season", "Site","Project")
+Temp_box <- sd |> plot_ly(y = ~Temp, type = "box", name = "Temperature (C)")
 
-#Pivot sd table
-sd <- sd %>%
-  pivot_longer(cols = -DateTime, names_to = 'Parameter', values_to = 'Value' )
+pH_box <- sd |> plot_ly(y = ~Temp, type = "box", name = "pH (none)")
 
-#Plot sd
-Graph_box <- ggplot(sd,aes(y=Value, x=factor(0)))+
-  geom_sd()+
-  facet_wrap(vars(Parameter), ncol = 4, scales = "free_y", labeller = labeller(Parameter =
-                                                                                   c("DO" = "DO (mg/L)",
-                                                                                     "pH" = "pH (none)",
-                                                                                     "Temp" = "Temp (C)",
-                                                                                     "Turbidity" = "Turbidity (FNU)")))+
-    theme_light()+
-    theme(axis.text.x=element_blank())+
-    labs(y= "", x= "")
+SpCon_box <- sd |> plot_ly(y = ~SpCon, type = "box", name = "Specific Conductance (ug/L)")
 
-  #Interactive Graph
-  ggplotly(Graph_box)
+#Turb_box <- sd |> plot_ly(y = ~Turbidity, type = "box", name = "Turbidity (FNU)")
+
+#Depth_box <- sd |> plot_ly(y = ~Depth, type = "box", name = "Depth (m)")
+
+  
+  fig_box <- subplot(DO_box, Temp_box, pH_box, SpCon_box) |> 
+    hide_legend()
+
+  fig_box
+  
+
+
 
 ```
 
