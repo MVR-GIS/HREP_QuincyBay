@@ -14,7 +14,6 @@ output:
 
 ---
 
-
 ```{r}
 library(flexdashboard)
 library(tidyverse)
@@ -30,6 +29,9 @@ library(readr)
 library(tidyr)
 library(crosstalk)
 
+```
+
+```{r}
 #Import and rename continuous sd frame
 sd <- read.csv("Compiled Project Spreadsheet.csv", check.names=FALSE)
 
@@ -40,7 +42,6 @@ sd$Date <- mdy(sd$Date)
 sd <- sd %>% 
   mutate(DateTime= as.POSIXct(paste(Date, Time), format= "%Y-%m-%d %H:%M:%S"))
 
-
 sd$DateTime <- anytime(sd$DateTime)
   
 #Select parameters of use
@@ -49,6 +50,43 @@ sd <- sd %>%
   
 # Wrap sd in Sharedsd to use with crosstalk
 sd <- SharedData$new(sd, group = "Site")  
+```
+
+
+Inputs {.sidebar}
+-----------------------------------
+
+```{r}
+
+
+
+site_filter <- filter_select(
+  id = "Site",
+  label = "Site:",
+  sharedData = sd,
+  group = ~Site, 
+  multiple = FALSE,
+  allLevels = FALSE
+)
+
+season_filter <- filter_select(
+  id = "Season",
+  label = "Season:",
+  sharedData = sd,
+  group = ~Season, 
+  multiple = FALSE,
+  allLevels = FALSE
+)
+
+
+crosstalk::bscols(
+     list(
+      project_filter,
+      site_filter,
+      season_filter)
+)
+
+
 
 ```
 
@@ -103,46 +141,6 @@ Column {sd-width=550}
   
   fig
  
-```
-
-
-Inputs {.sidebar}
------------------------------------
-
-```{r}
-
-
-project_filter <- filter_select(
-  id = "Prj",
-  label = "Project:",
-  sharedData = sd,
-  group = ~Project
-)
-
-site_filter <- filter_select(
-  id = "Site",
-  label = "Site:",
-  sharedData = sd,
-  group = ~Site
-)
-
-season_filter <- filter_select(
-  id = "Season",
-  label = "Season:",
-  sharedData = sd,
-  group = ~Season
-)
-
-
-crosstalk::bscols(
-     list(
-      project_filter,
-      site_filter,
-      season_filter)
-)
-
-
-
 ```
 
 
