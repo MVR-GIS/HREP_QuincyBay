@@ -1,18 +1,29 @@
 ---
-title: "Rock Island District HREP Water Quality Monitoring Data"
-output: 
+title: "USACE MVR Water Quality Monitoring Data"
+output:
   flexdashboard::flex_dashboard:
-    theme:
-      primary: "#9FBCC8"
-      base_font:
-        google: Prompt
-      code_font:
-        google: JetBrains Mono
+    theme: 
+      version: 4
+      bootswatch: lumen
     orientation: columns
-    vertical_layout: fill
+    vertical_layout: scroll
     logo: "Picture1.png"
 
 ---
+
+<style>
+
+.navbar-brand {
+font-weight:bold;
+font-size:25px;
+font-stretch:expanded;}
+
+.logo {
+  float: left;
+}
+
+</style>
+
 
 ```{r}
 library(flexdashboard)
@@ -28,12 +39,22 @@ library(plotly)
 library(readr)
 library(tidyr)
 library(crosstalk)
+library(RColorBrewer)
+library(bslib)
+library(gt)
+library(lubridate)
+library(feather)
 
 ```
 
 ```{r}
+
+
 #Import and rename continuous sd frame
-sd <- read.csv("Compiled Project Spreadsheet.csv", check.names=FALSE)
+sd <- read.csv("Compiled Project Spreadsheet.csv")
+write_feather(sd, "sd.feather")
+
+sd <- read_feather("sd.feather")
 
 
 #Format Date and Time
@@ -42,104 +63,170 @@ sd$Date <- mdy(sd$Date)
 sd <- sd %>% 
   mutate(DateTime= as.POSIXct(paste(Date, Time), format= "%Y-%m-%d %H:%M:%S"))
 
-sd$DateTime <- anytime(sd$DateTime)
+sd$DateTime <- anytime(sd$DateTime) 
+
+#Add DateTime column without year
+
+sd <- sd |> 
+  mutate(NEWDATE = format(as.Date(Date, "%y-%m-%d"), "%m-%d"))
+
+sd <- sd %>% 
+  mutate(NEWDateTime= as.POSIXct(paste(NEWDATE, Time), format= "%m-%d %H:%M:%S"))
+
+sd$NEWDATE <- anytime(sd$NEWDATE) 
+
+#Subtract year for November and December to plot properly for winter page
+sd <- sd |> 
+  mutate(FINALDATE = case_when(
+    month(NEWDateTime) %in% c(12, 11) ~ NEWDateTime - years(1), TRUE ~ NEWDateTime))
   
+
+
 #Select parameters of use
 sd <- sd %>% 
-    select("Project", "Site", "Season", "DateTime", "Temp", "SpCon", "DO", "pH", "Turbidity", "Depth")
+    select("Site", "Season", "DateTime","FINALDATE", "Temp", "SpCon", "DO", "pH", "Turbidity", "Depth")
+
+#Filter to seperate summer and winter data
+sd_winter <- sd |>  
+    filter(grepl('Winter', sd$Season)) 
+
+sd_summer <- sd |>  
+    filter(grepl('Summer', sd$Season)) 
   
 # Wrap sd in Sharedsd to use with crosstalk
-sd <- SharedData$new(sd, group = "Site")  
+
+sd <- SharedData$new(sd)
+
+sd_winter <- SharedData$new(sd_winter)
+
+sd_summer <- SharedData$new(sd_summer)
+
 ```
 
 
+
+
+Summer Data
+=======================================================================
+
+
 Inputs {.sidebar}
------------------------------------
+-----------------------------------------------------------------------
 
 ```{r}
 
-
-
-site_filter <- filter_select(
-  id = "Site",
-  label = "Site:",
-  sharedData = sd,
-  group = ~Site, 
-  multiple = FALSE,
-  allLevels = FALSE
+season_filter <- filter_checkbox(
+  id = "Season",
+  label = "Season(s):",
+  sharedData = sd_summer,
+  group = ~Season
 )
 
-season_filter <- filter_select(
-  id = "Season",
-  label = "Season:",
-  sharedData = sd,
-  group = ~Season, 
-  multiple = FALSE,
-  allLevels = FALSE
+site_filter <- filter_select(
+  id =  "Site",
+  label = "Site:",
+  sharedData = sd_summer,
+  group = ~Site, 
 )
 
 
 crosstalk::bscols(
      list(
-      project_filter,
-      site_filter,
-      season_filter)
+       season_filter,
+       site_filter
+      )
 )
-
 
 
 ```
 
+**Monitoring Site Descriptions:**
+
+**W-M329.5Y** - Continuous monitoring and grab samples. Representative location of Upper Bay for future overwintering habitat and dredging.
+
+**W-M329.8P** - Continuous monitoring and grab samples. Representative location of Willow Slough for future overwintering habitat and dredging.
+
+
+**W-M328.8K** - Grab samples. Representative location of Boater's Chute.
+
+**W-M328.5X** - Grab samples. Representative location of Middle Bay for future overwintering habitat and dredging.
+
 
 Column {sd-width=550}
 -----------------------------------------------------------------------
+
+<font size="5"> **Quincy Bay HREP** </font>
+
+Water quality related goals of the Quincy Bay HREP include restoring diversity of aquatic habitat types with desire for more lentic and backwater habitats and restoring aquatic vegetation in backwater areas.
+
+*Pre-Project Monitoring: 2021-2024*  
+*Construction: NA*  
+*Post-Monitoring: NA*  
 
 ### Continuous Monitoring Data
 
 ```{r}
 #Plot sd
 
-  DO <- plot_ly(data=sd, 
-                x=~DateTime, 
-                y=~DO)|> 
-        layout(yaxis = list(title = "Dissolved Oxygen (mg/L)")) |> 
+
+  DO <- plot_ly(data=sd_summer, 
+                x=~FINALDATE, 
+                y=~DO, 
+                linetype = ~Season, 
+                color = ~Season, 
+                colors = brewer.pal(3, "Blues"))|> 
+        layout(yaxis = list(title = "Dissolved Oxygen (mg/L)"), showlegend=T) |> 
         add_lines()
 
-  Temp <-plot_ly(data=sd, 
-                 x=~DateTime, 
-                 y=~Temp) |> 
-         layout(yaxis = list(title = "Temperature (C)")) |> 
+  Temp <-plot_ly(data=sd_summer, 
+                x=~FINALDATE, 
+                y=~Temp, 
+                linetype = ~Season, 
+                color = ~Season, 
+                colors = brewer.pal(3, "Blues")) |> 
+         layout(yaxis = list(title = "Temperature (C)"), showlegend=F) |> 
          add_lines()
   
-  pH <- plot_ly(data=sd, 
-                x=~DateTime, 
-                y=~pH)|> 
-        layout(yaxis = list(title = "pH (none)")) |> 
+  pH <- plot_ly(data=sd_summer, 
+                x=~FINALDATE, 
+                y=~pH, 
+                linetype = ~Season, 
+                color = ~Season, 
+                colors = brewer.pal(3, "Blues")) |>   
+        layout(yaxis = list(title = "pH (none)"), showlegend=F) |> 
         add_lines() 
   
-  SpCon <- plot_ly(data=sd, 
-                   x=~DateTime, 
-                   y=~SpCon)|> 
-          layout(yaxis = list(title = "Specific Conductance (ug/L)")) |> 
+  SpCon <- plot_ly(data=sd_summer, 
+                x=~FINALDATE, 
+                y=~SpCon, 
+                linetype = ~Season, 
+                color = ~Season, 
+                colors = brewer.pal(3, "Blues")) |> 
+          layout(yaxis = list(title = "Specific Conductance (ug/L)"), showlegend=F) |> 
           add_lines()
   
-  # Turb <- plot_ly(data=sd, 
-  #                  x=~DateTime, 
-  #                  y=~Turbidity)|> 
-  #         layout(yaxis = list(title = "Turbidity (FNU)")) |> 
-  #         add_lines()
+   Turb <- plot_ly(data=sd_summer, 
+                x=~FINALDATE, 
+                y=~Turbidity, 
+                linetype = ~Season, 
+                color = ~Season, 
+                colors = brewer.pal(3, "Blues")) |> 
+          layout(yaxis = list(title = "Turbidity (FNU)"), showlegend=F) |> 
+          add_lines()
+
+   
+   # Depth <- plot_ly(data=sd, 
+   #                  x=~DateTime, 
+   #                  y=~Depth)|> 
+   #         layout(yaxis = list(title = "Depth (m)")) |> 
+   #         add_lines()
   
-  # Depth <- plot_ly(data=sd, 
-  #                  x=~DateTime, 
-  #                  y=~Depth)|> 
-  #         layout(yaxis = list(title = "Depth (m)")) |> 
-  #         add_lines()
   
+  fig <- subplot(DO, Temp, pH, SpCon, Turb, nrows = 5, titleY = TRUE)
   
-  fig <- subplot(DO, Temp, pH, SpCon, nrows = 4, titleY = TRUE) |>
-         hide_legend() 
+##plotly::layout
   
-  fig
+fig
  
 ```
 
@@ -147,7 +234,7 @@ Column {sd-width=550}
 Column {sd-width=450}
 -----------------------------------------------------------------------
     
-### Site Locations
+### Project Site Locations
 
 ```{r}
 
@@ -162,9 +249,10 @@ Column {sd-width=450}
   
   m <- leaflet() %>% 
     addTiles() %>% 
-    addCircleMarkers(lng = -91.41439, lat = 39.97359, label = "W-M329.5Y") %>%
-    addCircleMarkers(lng = -91.434937, lat = 39.953843, label = "W-M328.8K") %>% 
-    addCircleMarkers(lng = -91.433622, lat = 39.969817, label = "W-M329.8P")
+    addCircleMarkers(lng = -91.41439, lat = 39.97359, label = "W-M329.5Y") |> 
+    addCircleMarkers(lng = -91.434937, lat = 39.953843, label = "W-M328.8K") |>  
+    addCircleMarkers(lng = -91.433622, lat = 39.969817, label = "W-M329.8P") |> 
+    addCircleMarkers(lng = -91.421269, lat = 39.9559, label = "W-M328.5X")
   
   m
 
@@ -174,21 +262,212 @@ Column {sd-width=450}
 
 ```{r}
 
-DO_box <- sd |> plot_ly(y = ~DO, type = "box", name = "Dissolved Oxygen (mg/L)")
+DO_box <- plot_ly(data=sd_summer, y = ~DO, type = "box", name = "Dissolved Oxygen (mg/L)", color = "#336699" ,colors = "#336699")
 
-Temp_box <- sd |> plot_ly(y = ~Temp, type = "box", name = "Temperature (C)")
 
-pH_box <- sd |> plot_ly(y = ~Temp, type = "box", name = "pH (none)")
+Temp_box <- plot_ly(data=sd_summer, y = ~Temp, type = "box", name = "Temperature (C)", color = "#336699", colors = "#336699")
+  
 
-SpCon_box <- sd |> plot_ly(y = ~SpCon, type = "box", name = "Specific Conductance (ug/L)")
+pH_box <- plot_ly(data=sd_summer, y = ~pH, type = "box", name = "pH (none)", color = "#336699", colors = "#336699")
+  
 
-#Turb_box <- sd |> plot_ly(y = ~Turbidity, type = "box", name = "Turbidity (FNU)")
+SpCon_box <- plot_ly(data=sd_summer, y = ~SpCon, type = "box", name = "Specific Conductance (ug/L)",color = "#336699", colors = "#336699")
+  
+  
+Turb_box <- plot_ly(data=sd_summer, y = ~Turbidity, type = "box", name = "Turbidity (FNU)",color = "#336699", colors = "#336699")
 
 #Depth_box <- sd |> plot_ly(y = ~Depth, type = "box", name = "Depth (m)")
 
   
-  fig_box <- subplot(DO_box, Temp_box, pH_box, SpCon_box) |> 
-    hide_legend()
+  fig_box <- subplot(DO_box, Temp_box, pH_box, SpCon_box, Turb_box) |> 
+    hide_legend() 
+
+  fig_box
+
+
+```
+
+
+
+Winter Data
+=======================================================================
+
+
+Inputs {.sidebar }
+-----------------------------------------------------------------------
+
+```{r}
+
+
+season_filter <- filter_checkbox(
+  id = "Season",
+  label = "Season(s):",
+  sharedData = sd_winter,
+  group = ~Season
+)
+
+
+site_filter <- filter_select(
+  id =  "Site",
+  label = "Site:",
+  sharedData = sd_winter,
+  group = ~Site, 
+)
+
+
+
+div(style = "margin-top: 85px;",
+crosstalk::bscols(
+     list(
+       season_filter,
+       site_filter
+      ))
+)
+
+
+```
+
+
+**Monitoring Site Descriptions:**
+
+**W-M329.5Y** - Continuous monitoring and grab samples. Representative location of Upper Bay for future overwintering habitat and dredging.
+
+**W-M329.8P** - Continuous monitoring and grab samples. Representative location of Willow Slough for future overwintering habitat and dredging.
+
+
+**W-M328.8K** - Grab samples. Representative location of Boater's Chute.
+
+**W-M328.5X** - Grab samples. Representative location of Middle Bay for future overwintering habitat and dredging.
+
+
+Column {sd-width=550}
+-----------------------------------------------------------------------
+
+<font size="5"> **Quincy Bay HREP** </font>
+
+Water quality related goals of the Quincy Bay HREP include restoring diversity of aquatic habitat types with desire for more lentic and backwater habitats and restoring aquatic vegetation in backwater areas.
+
+*Pre-Project Monitoring: 2021-2024*  
+*Construction: NA*  
+*Post-Monitoring: NA*  
+
+### Continuous Monitoring Data
+
+```{r}
+#Plot sd
+
+
+  DO <- plot_ly(data=sd_winter, 
+                x=~FINALDATE, 
+                y=~DO, 
+                linetype = ~Season, 
+                color = ~Season, 
+                colors = brewer.pal(3, "Blues"))|> 
+        layout(yaxis = list(title = "Dissolved Oxygen (mg/L)")) |> 
+        add_lines()
+
+  Temp <-plot_ly(data=sd_winter, 
+                x=~FINALDATE, 
+                y=~Temp, 
+                linetype = ~Season, 
+                color = ~Season, 
+                colors = brewer.pal(3, "Blues")) |> 
+         layout(yaxis = list(title = "Temperature (C)")) |> 
+         add_lines()
+  
+  pH <- plot_ly(data=sd_winter, 
+                x=~FINALDATE, 
+                y=~pH, 
+                linetype = ~Season, 
+                color = ~Season, 
+                colors = brewer.pal(3, "Blues")) |>   
+        layout(yaxis = list(title = "pH (none)")) |> 
+        add_lines() 
+  
+  SpCon <- plot_ly(data=sd_winter, 
+                x=~FINALDATE, 
+                y=~SpCon, 
+                linetype = ~Season, 
+                color = ~Season, 
+                colors = brewer.pal(3, "Blues")) |> 
+          layout(yaxis = list(title = "Specific Conductance (ug/L)")) |> 
+          add_lines()
+  
+   Turb <- plot_ly(data=sd_winter, 
+                x=~FINALDATE, 
+                y=~Turbidity, 
+                linetype = ~Season, 
+                color = ~Season, 
+                colors = brewer.pal(3, "Blues")) |> 
+          layout(yaxis = list(title = "Turbidity (FNU)")) |> 
+          add_lines()
+
+   
+   # Depth <- plot_ly(data=sd, 
+   #                  x=~DateTime, 
+   #                  y=~Depth)|> 
+   #         layout(yaxis = list(title = "Depth (m)")) |> 
+   #         add_lines()
+  
+  
+  fig <- subplot(DO, Temp, pH, SpCon, Turb, nrows = 5, titleY = TRUE) |>
+         hide_legend() 
+  
+fig
+ 
+```
+
+
+Column {sd-width=450}
+-----------------------------------------------------------------------
+    
+### Site Locations
+
+```{r}
+ 
+library(leaflet)
+  library(sp)
+  
+  #Loc <- read.csv("QuincyBay_Locations.csv")
+  
+  #Loc$Long <- as.numeric(Loc$Long)
+  #Loc$Lat <- as.numeric(Loc$Lat)
+  
+  
+  m <- leaflet() %>% 
+    addTiles() %>% 
+    addCircleMarkers(lng = -91.41439, lat = 39.97359, label = "W-M329.5Y") |> 
+    addCircleMarkers(lng = -91.434937, lat = 39.953843, label = "W-M328.8K") |>  
+    addCircleMarkers(lng = -91.433622, lat = 39.969817, label = "W-M329.8P") |> 
+    addCircleMarkers(lng = -91.421269, lat = 39.9559, label = "W-M328.5X")
+  
+  m
+
+```
+
+### Boxplot Statistics
+
+```{r}
+
+DO_box <- plot_ly(data=sd_winter, y = ~DO, type = "box", name = "Dissolved Oxygen (mg/L)", color = "#336699" ,colors = "#336699")
+
+
+Temp_box <- plot_ly(data=sd_winter, y = ~Temp, type = "box", name = "Temperature (C)", color = "#336699", colors = "#336699")
+  
+
+pH_box <- plot_ly(data=sd_winter, y = ~pH, type = "box", name = "pH (none)", color = "#336699", colors = "#336699")
+  
+
+SpCon_box <- plot_ly(data=sd_winter, y = ~SpCon, type = "box", name = "Specific Conductance (ug/L)",color = "#336699", colors = "#336699")
+  
+  
+Turb_box <- plot_ly(data=sd_winter, y = ~Turbidity, type = "box", name = "Turbidity (FNU)",color = "#336699", colors = "#336699")
+
+#Depth_box <- sd |> plot_ly(y = ~Depth, type = "box", name = "Depth (m)")
+
+  
+  fig_box <- subplot(DO_box, Temp_box, pH_box, SpCon_box, Turb_box) |> 
+    hide_legend() 
 
   fig_box
   
@@ -197,3 +476,41 @@ SpCon_box <- sd |> plot_ly(y = ~SpCon, type = "box", name = "Specific Conductanc
 
 ```
 
+
+
+Data Summary
+=======================================================================
+
+
+
+Column {sd-width=100}
+-----------------------------------------------------------------------
+
+<font size="5"> **Collection Methods** </font>
+
+Summer monitoring is defined by EC-HQ to be from May through September. A typical summer season occurs from roughly June through September but can vary due to weather and personnel availability. Winter monitoring is defined by EC-HQ from November to April. A typical winter season occurs from roughly December through March but can vary due to weather and personnel availability.
+
+Continuous monitoring data is collected via YSI EXO sondes. Parameters collected on one sonde are specific conductance and temperature (degrees Celsius), dissolved oxygen (mg/L and % saturation), pH, turbidity (FNU), and at times, chlorophyll (ug/L and RFU) and phycocyanin (ug/L and RFU). Readings are programmed to be taken at 1 hour intervals throughout the duration of the monitoring season.
+
+
+### Data Collected
+
+```{r}
+data <- read.csv("Tracking.csv")
+
+
+data %>%
+  gt() %>%
+  tab_header(title = "Monitoring Data Summary at Quincy Bay HREP") %>%
+  cols_label(Alias = "Site Name", Winter.2023.2024 = "Winter 2023-2024", Summer.2023 = "Summer 2023", Winter.2022.2023 = "Winter 2022-2023", Summer.2022 = "Summer 2022", Winter.2021.2022 = "Winter 2021-2022", Summer.2021 = "Summer 2021", Winter.2020.2021 = "Winter 2020-2021") %>%
+  tab_style(
+    style = list(cell_fill(color = "#F4F4F4")),
+    locations = cells_body(columns = Alias)
+  ) |> 
+   cols_align(
+    align = "center"
+  )
+ 
+```
+
+X indicates grab sample data was collected, and O indicates both continuous monitoring and grab sample data was collected at the indicated site
